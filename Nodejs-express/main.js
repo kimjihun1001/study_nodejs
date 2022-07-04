@@ -1,3 +1,59 @@
+var express = require('express')
+var app = express()
+var port = 3000
+var fs = require('fs');
+var template = require('./lib/template.js');
+var bodyParser = require('body-parser');
+var compression = require('compression');
+var topicRouter = require('./routes/topic');
+var indexRouter = require('./routes/index');
+
+// 보안 관련 모듈
+const helmet = require('helmet')
+app.use(helmet())
+
+// public 디렉토리 안에서 static 파일을 찾겠다
+app.use(express.static('public'));
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(compression());
+
+// 파일 읽어서 request에 담아주는 미들웨어
+app.get('*', function(request, response, next){
+  fs.readdir('./data', function(error, filelist){
+    request.list = filelist;
+    // 다음 미들웨어를 실행할 지, 말지를 선택할 수 있다
+    next();
+  });
+});
+// app.use(function(request, response, next){
+//   fs.readdir('./data', function(error, filelist){
+//     request.list = filelist;
+//     next();
+//   });
+// })
+
+// 홈 관련 파일로 따로 분리
+app.use('/', indexRouter);
+
+// topic 관련 파일로 따로 분리
+// topic으로 시작하는 주소들에게 topicRouter라는 미들웨어를 적용하겠다
+app.use('/topic',topicRouter);
+
+// Error Handler 미들웨어는 맨 밑에 놔야 한다
+app.use(function(req, res, next) {
+  res.status(404).send('Sorry cannot find page');
+})
+app.use(function(err, req, res, next){
+  console.error(err.stack)
+  res.status(500).send('Something broke!');
+})
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+});
+
+/*
 var http = require('http');
 var fs = require('fs');
 var url = require('url');
@@ -141,3 +197,4 @@ var app = http.createServer(function(request,response){
     }
 });
 app.listen(3000);
+*/
